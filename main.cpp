@@ -12,6 +12,7 @@
 #include <sstream>
 #include <string>
 #include <ctime>
+#include <algorithm>
 //#include <gmp.h>
 //#include <gmpxx.h>
 #include "gmp.h"
@@ -205,27 +206,6 @@ Sparse *simplify_matrix(Sparse *matrix, Sparse *substitutes) {     // this corre
     return output_matrix;
 };
 
-void dimensions(string file_name, int* M, int* N) { // find dimensions of a matrix in a .txt file
-    ifstream file;
-    string row;
-    file.open(file_name);
-    if(file.is_open()) {
-        while(getline(file,row,'\n')) {
-            int empty_count = 0;
-            for (int i=0; i < (int)row.length(); i++) {
-                if (row[i] == ' ') {
-                    empty_count++;
-                }
-            }
-            if (*N < empty_count + 1) {
-                *N = empty_count + 1;
-            }
-            *M = *M+1;
-        }
-        file.close();
-    }
-}
-
 void Dines_Theorem_1927 (double** initial_matrix, unsigned long long int N, int M, bool verbose, string file) {
     cout << "M = " << M << "\n";
     cout << "N = " << N << "\n";
@@ -365,63 +345,85 @@ void swap(double*** initial_matrix, int col1, int col2, int N) {
     }
 }
 
+void dimensions(string data, int* M, int* N) { // find dimensions of a matrix in a string
+    
+    for (int i=0; i<data.length(); i++) {
+        if (data[i] == ' ') {
+            *N = *N + 1;
+        }
+        if (data[i] == '|') {
+            *M = *M + 1;
+        }
+    }
+    
+    *M = *M + 1;
+    *N = *N / *M;
+}
+
 int main(int argc, char **argv) {
     double duration = 0;
     clock_t start = clock();
-    string file_name;
-    if (argv[1]) {
-        file_name = argv[1];
-    } else {
-        cout << "Please enter a space-delineated matrix in a .txt file as the first parameter to this program.\n";
-        exit(0);
-    }
-    bool verbose = false;
-    for (int i=0; i < argc; i++) {  // checking for additional parameters
-        if (string(argv[i]) == "-v") {
-            verbose = true;
-            break;
-        }
-    }
-    //verbose = false;
-    string row;
-    ifstream file;
-    file.open(file_name);
     
-    if (!file) {
-        cout << "Cannot open file.\n";
-        file.close();
+    string input;
+    int number;
+    if (argv[1] && argv[2]) {
+        input = argv[1];
+        number = stoi(argv[2]);
+    } else {
+        cout << "Please enter values in the form a string, with rows delineated with the symbol '|'.\n";
         exit(0);
     }
     
     int N = 0;
     int M = 0;
-    dimensions(file_name, &M, &N);
+    dimensions(input, &M, &N);
     
     // CREATE INITIAL MATRIX
     
-    double** initial_matrix = new double*[M];
+//    input.erase(remove(input.begin(), input.end(), '|'), input.end());
+//    input.erase(remove(input.begin(), input.end(), ' '), input.end());
     
+    double** initial_matrix = new double*[M];
+
     for (int i=0; i<M; i++) {
         initial_matrix[i] = new double[N];
     }
     
-    if (file.is_open()) {   // convert .txt file to a double two dimensional array
-        for (int i=0; i < M; i++) {
-            for (int j=0; j < N; j++) {
-                file >> initial_matrix[i][j];
-            }
+    int i=0;
+    int j=0;
+    
+    string value = "";
+    for (int k=0; k < input.length(); k++) {
+        if (input[k] == ' ') {
+            initial_matrix[i][j] = stod(value);
+            j++;
+            value = "";
+            continue;
         }
-        file.close();
+        if (input[k] == '|') {
+            j=0;
+            i++;
+            value = "";
+            continue;
+        }
+        value += input[k];
     }
-    
-    Dines_Theorem_1927(initial_matrix,N,M,verbose,"solution.txt");
-    
+
+//    for (int i=0; i<M; i++) {
+//        for (int j=0; j<N; j++) {
+//            cout << initial_matrix[i][j] << " ";
+//        }
+//        cout << "\n";
+//    }
+
+    Dines_Theorem_1927(initial_matrix,N,M,false,"solution.txt");
+
     for (int i=0; i<M; i++) {
         delete[] initial_matrix[i];
     }
-    
+
     delete[] initial_matrix;
-    
+
     duration = (clock() - start)/(double) CLOCKS_PER_SEC;
     cout << "Total duration: " << duration << "\n";
 };
